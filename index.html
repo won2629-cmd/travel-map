@@ -275,7 +275,7 @@ REGIONS.forEach(r=>{
   p.setAttribute('d',r.d);
   p.setAttribute('class','region'+(r.parent?' island':''));
   p.dataset.id=r.id;
-  p.addEventListener('click',()=>{ if(!mapMoved) openPanel(r.id); });
+
   p.addEventListener('mousemove',e=>{
     tip.textContent=`${dispName(r.id)} · ${cnt(r.id)}회`;
     tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+10)+'px'; tip.style.opacity=1;
@@ -355,10 +355,16 @@ svg.addEventListener('wheel',e=>{
 },{passive:false});
 const ptrs=new Map();
 let lastDist=0,lastMid=null,downPos=null;
+let downTarget=null;
 svg.addEventListener('pointerdown',e=>{
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   svg.setPointerCapture(e.pointerId);
-  if(ptrs.size===1){ mapMoved=false; downPos={x:e.clientX,y:e.clientY}; }
+  if(ptrs.size===1){
+    mapMoved=false; downPos={x:e.clientX,y:e.clientY};
+    downTarget = (e.target && e.target.dataset && e.target.dataset.id) ? e.target.dataset.id : null;
+  }else{
+    downTarget=null;
+  }
   if(ptrs.size===2){
     const[a,b]=[...ptrs.values()];
     lastDist=Math.hypot(a.x-b.x,a.y-b.y);
@@ -399,6 +405,8 @@ function endPtr(e){
   if(ptrs.size<2){lastDist=0;lastMid=null;}
   if(ptrs.size===0){
     svg.classList.remove('dragging');
+    if(!mapMoved && downTarget) openPanel(downTarget);
+    downTarget=null;
     setTimeout(()=>{mapMoved=false;},50);
   }
 }
