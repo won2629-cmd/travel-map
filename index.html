@@ -823,6 +823,17 @@ function codeKey(){
   // 코드에서 경로에 못 쓰는 문자 제거
   return syncCode.replace(/[.#$\[\]\/\s]/g,'');
 }
+/* Firebase 키에 '#'을 쓸 수 없으므로 '~'로 바꿔 저장 */
+function encData(d){
+  const o={};
+  for(const k in d) o[k.replace(/#/g,'~')]=d[k];
+  return o;
+}
+function decData(d){
+  const o={};
+  for(const k in d) o[k.replace(/~/g,'#')]=d[k];
+  return o;
+}
 const syncModal=document.getElementById('syncModal');
 document.getElementById('btnSync').onclick=()=>{
   document.getElementById('syncCode').value=syncCode;
@@ -843,7 +854,7 @@ document.getElementById('btnUp').onclick=async ()=>{
   updateSyncStat('올리는 중...');
   try{
     await fbdb.ref('travelmap/'+codeKey()).set({
-      data: JSON.parse(JSON.stringify(data)),
+      data: encData(JSON.parse(JSON.stringify(data))),
       updated: new Date().toISOString()
     });
     updateSyncStat('완료! '+new Date().toLocaleString('ko-KR')+' 에 저장됨');
@@ -860,7 +871,7 @@ document.getElementById('btnDown').onclick=async ()=>{
     if(!snap.exists()){ updateSyncStat('이 코드로 저장된 데이터가 없어요'); return; }
     const v=snap.val();
     if(!confirm('클라우드 데이터('+(v.updated? new Date(v.updated).toLocaleString('ko-KR'):'날짜 없음')+' 저장)로\n이 기기의 지도를 바꿀까요?')) { updateSyncStat(''); return; }
-    data=v.data||{};
+    data=decData(v.data||{});
     store.save(data); paint();
     if(cur){ renderCount(); renderVisits(); }
     updateSyncStat('내려받기 완료!');
@@ -876,7 +887,7 @@ store.save=d=>{
   clearTimeout(autoTm);
   autoTm=setTimeout(()=>{
     fbdb.ref('travelmap/'+codeKey()).set({
-      data: JSON.parse(JSON.stringify(data)),
+      data: encData(JSON.parse(JSON.stringify(data))),
       updated: new Date().toISOString()
     }).catch(()=>{});
   },3000);
