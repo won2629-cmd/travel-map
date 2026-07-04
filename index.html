@@ -304,7 +304,7 @@ footer{display:flex;gap:8px;justify-content:center;padding-bottom:34px;flex-wrap
 </div>
 
 <footer>
-  <span style="align-self:center;font-size:11px;color:rgba(60,80,100,.55)">v22</span>
+  <span style="align-self:center;font-size:11px;color:rgba(60,80,100,.55)">v23</span>
   <button class="btn mini" id="btnSync">☁️ 클라우드 동기화</button>
   <button class="btn mini" id="btnExport">💾 기록 내보내기</button>
   <button class="btn mini" id="btnImport">📂 기록 불러오기</button>
@@ -809,23 +809,27 @@ function updateReco(reset){
   const btn=document.getElementById('btnReco');
   const card=document.getElementById('recoCard');
   if(reset) card.style.display='none';
-  const show = cur && RECO[cur] && card.style.display==='none';
+  const show = cur && card.style.display==='none';
   btn.style.display = show ? '' : 'none';
-  btn.textContent = cnt(cur)===0 ? '🎯 여기 어때?' : '👥 추천·공유';
+  btn.textContent = (RECO[cur] && cnt(cur)===0) ? '🎯 여기 어때?' : '👥 추천·공유';
 }
 document.getElementById('btnReco').onclick=()=>{
-  renderRecoCard(cnt(cur)===0 ? 'spots' : 'friends');
+  renderRecoCard((RECO[cur] && cnt(cur)===0) ? 'spots' : 'friends');
   document.getElementById('recoCard').style.display='block';
   document.getElementById('btnReco').style.display='none';
 };
 function renderRecoCard(tab){
   const card=document.getElementById('recoCard');
   const spots=RECO[cur]||[];
-  let inner=`<h3>🎯 ${esc(dispName(cur))}, 이런 곳이 있어요</h3>
-    <div class="recotabs">
-      <button class="recotab ${tab==='spots'?'on':''}" onclick="renderRecoCard('spots')">🎯 추천 여행지</button>
-      <button class="recotab ${tab==='friends'?'on':''}" onclick="renderRecoCard('friends')">👥 친구 추천</button>
-    </div>`;
+  const hasSpots=spots.length>0;
+  if(!hasSpots) tab='friends';
+  let inner = hasSpots
+    ? `<h3>🎯 ${esc(dispName(cur))}, 이런 곳이 있어요</h3>
+      <div class="recotabs">
+        <button class="recotab ${tab==='spots'?'on':''}" onclick="renderRecoCard('spots')">🎯 추천 여행지</button>
+        <button class="recotab ${tab==='friends'?'on':''}" onclick="renderRecoCard('friends')">👥 친구 추천</button>
+      </div>`
+    : `<h3>👥 ${esc(dispName(cur))} 친구 추천</h3>`;
   if(tab==='spots'){
     inner+=spots.map(s=>`<div class="spot">
       <div class="ic">${s[0]}</div>
