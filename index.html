@@ -55,6 +55,22 @@ body{
 .qmode.on{background:var(--banner);border-color:var(--banner);color:#fff}
 .qmode{display:inline-flex;align-items:center;gap:5px}
 .qmicon{width:1.1em;height:1.1em;flex:none}
+/* ---- 백지도 ---- */
+.region.blank{fill:#fdfaf3 !important}
+.region.blank.bchecked{fill:#d8f0d8 !important}
+.rlabel.blanklabel{opacity:0;transition:opacity .15s}
+.rlabel.blanklabel.show{opacity:1}
+#blankBar{
+  position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:80;
+  display:none;align-items:center;gap:10px;
+  background:#fffdf8;border-radius:20px;padding:9px 18px;box-shadow:0 8px 26px rgba(0,0,0,.22);
+}
+#blankBar.on{display:flex}
+#blankBar .bstat{font-family:'Jua';font-size:14px;color:var(--banner-dark)}
+#blankBar .bbtn{
+  font-family:'Jua';font-size:13px;border:none;cursor:pointer;background:#a8b8c4;color:#fff;
+  border-radius:14px;padding:7px 14px;
+}
 .qprog{margin-left:auto;font-family:'Jua';font-size:13px;color:var(--banner-dark)}
 .qquit{background:none;border:none;font-size:16px;color:#c9b9a8;cursor:pointer;padding:2px 4px}
 #quizCard h3{font-family:'Jua';font-size:16px;text-align:center;margin-bottom:10px}
@@ -343,6 +359,7 @@ footer{display:flex;gap:8px;justify-content:center;padding-bottom:34px;flex-wrap
   <button class="tab on" id="tabKr"><svg class="tabicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.9,18.3 5.9,16.5 6.7,15.8 6.4,15.2 7.2,14.9 7.9,13.4 7.8,13.0 8.5,12.3 8.0,11.9 8.4,11.5 7.9,11.1 7.9,10.3 7.4,10.4 7.2,9.0 6.7,9.0 6.6,8.5 7.4,7.5 8.0,7.2 8.7,7.5 8.7,7.2 7.7,6.7 7.7,6.4 8.3,6.2 8.2,5.8 7.6,6.2 7.3,5.3 7.8,5.3 6.8,4.9 7.2,4.8 7.0,4.2 8.3,4.4 8.5,3.7 9.0,3.3 8.7,3.0 9.1,2.6 10.1,2.1 13.0,2.2 14.0,1.0 17.6,7.3 17.8,8.5 17.5,11.4 17.9,11.1 18.1,11.5 17.4,14.3 16.4,15.5 15.6,15.7 15.4,15.3 15.0,15.2 15.3,15.5 15.4,16.5 14.9,16.9 14.1,16.7 13.6,16.0 13.8,16.4 13.1,16.1 13.0,16.9 12.4,16.8 12.2,16.4 12.2,18.1 11.6,17.4 11.9,17.3 11.8,16.8 11.2,17.4 11.4,17.8 11.2,18.1 11.0,17.7 9.9,18.0 9.9,18.4 9.5,18.6 8.0,18.6 7.7,17.6 7.5,18.1 6.9,18.3ZM7.0,22.1 8.4,21.3 9.6,21.6 9.1,22.5 8.3,22.8 7.2,23.0 6.8,22.6 7.0,22.1Z" fill="#3aa655"/></svg>전국 여행</button>
   <button class="tab" id="tabWorld">🌍 세계 여행</button>
   <button class="tab quiztab" id="tabQuiz">❓ 퀴즈</button>
+  <button class="tab quiztab" id="tabBlank">🗒️ 백지도</button>
 </div>
 
 <div class="stats">
@@ -379,7 +396,7 @@ footer{display:flex;gap:8px;justify-content:center;padding-bottom:34px;flex-wrap
 </div>
 
 <footer>
-  <span style="align-self:center;font-size:11px;color:rgba(60,80,100,.55)">v33</span>
+  <span style="align-self:center;font-size:11px;color:rgba(60,80,100,.55)">v34</span>
   <button class="btn mini" id="btnSync">☁️ 클라우드 동기화</button>
   <button class="btn mini" id="btnExport">💾 기록 내보내기</button>
   <button class="btn mini" id="btnImport">📂 기록 불러오기</button>
@@ -419,6 +436,11 @@ footer{display:flex;gap:8px;justify-content:center;padding-bottom:34px;flex-wrap
     <div id="searchResults"></div>
     <button class="syncclose" id="searchClose">닫기</button>
   </div>
+</div>
+
+<div id="blankBar">
+  <span class="bstat" id="blankStat"></span>
+  <button class="bbtn" id="blankQuit">✕ 종료</button>
 </div>
 
 <div id="tip"></div>
@@ -629,6 +651,7 @@ const COLORS=['#fdfaf3','#ffe3c2','#ffc38f','#ff9e5c','#f47733','#d9531e'];
 const tip=document.getElementById('tip');
 const els={};   // id -> {path,label,region,map}
 const MAPS={};
+const blankState={active:false, type:'kr', checked:new Set(), prevTab:'kr'};
 
 const dispName = id => {
   const r=els[id].region;
@@ -730,6 +753,11 @@ function buildMap(key, svgId, regions, baseW, baseH, opt){
     const grow=Math.min(2.2, Math.pow(z,0.35));
     regions.forEach(r=>{
       const e=els[r.id];
+      if(blankState.active && blankState.type===M.key){
+        e.label.style.display='';
+        e.label.setAttribute('font-size',((r.parent?M.labelBase-1.5:M.labelBase)*1.4/pxPerUnit).toFixed(2));
+        return;
+      }
       const txt=e.label.textContent;
       if(!txt){ e.label.style.display='none'; return; }
       const base=(r.parent?M.labelBase-1.5:M.labelBase);
@@ -740,8 +768,11 @@ function buildMap(key, svgId, regions, baseW, baseH, opt){
       e.label.style.display='';
       e.label.setAttribute('font-size',(screenFont/pxPerUnit).toFixed(2));
     });
-    // 수도 점: 나라가 화면에서 충분히 클 때만
+    // 수도 점: 나라가 화면에서 충분히 클 때만 (백지도 모드에서는 숨김)
     M.capdots.forEach(({dot,lab,r,d})=>{
+      if(blankState.active && blankState.type===M.key){
+        dot.style.display='none'; lab.style.display='none'; return;
+      }
       const area=r.a*pxPerUnit*pxPerUnit;
       const showDot=area>2200, showName=area>12000;
       dot.style.display=showDot?'':'none';
@@ -813,7 +844,10 @@ function buildMap(key, svgId, regions, baseW, baseH, opt){
     if(ptrs.size<2){lastDist=0;lastMid=null;}
     if(ptrs.size===0){
       svg.classList.remove('dragging');
-      if(!M.mapMoved && downTarget && !quiz.active) openPanel(downTarget);
+      if(!M.mapMoved && downTarget){
+        if(blankState.active && blankState.type===M.key) revealBlank(downTarget);
+        else if(!quiz.active) openPanel(downTarget);
+      }
       downTarget=null;
       setTimeout(()=>{M.mapMoved=false;},50);
     }
@@ -846,6 +880,7 @@ function paint(){
   for(const id in els){
     const n=cnt(id);
     const e=els[id];
+    if(blankState.active && blankState.type===e.map.key) continue; // 백지도는 색칠 안 보여줌
     e.path.style.fill=COLORS[Math.min(n,5)];
     if(e.region.parent) e.label.textContent=(data[id]&&data[id].name)||e.region.n;
     e.label.classList.toggle('lit', n>=3);
@@ -871,13 +906,80 @@ function setTab(t){
   document.getElementById('tabKr').classList.toggle('on',t==='kr');
   document.getElementById('tabWorld').classList.toggle('on',t==='world');
   document.getElementById('tabQuiz').classList.remove('on');
+  document.getElementById('tabBlank').classList.remove('on');
   document.getElementById('wrapKr').style.display = t==='kr'?'block':'none';
   document.getElementById('wrapWorld').style.display = t==='world'?'block':'none';
   paint();
   try{ localStorage.setItem('travel-map-tab',t); }catch(e){}
 }
-document.getElementById('tabKr').onclick=()=>{ if(quiz.active){endQuiz('kr');} else setTab('kr'); };
-document.getElementById('tabWorld').onclick=()=>{ if(quiz.active){endQuiz('world');} else setTab('world'); };
+document.getElementById('tabKr').onclick=()=>{
+  if(quiz.active){endQuiz('kr');return;}
+  if(blankState.active){endBlank('kr');return;}
+  setTab('kr');
+};
+document.getElementById('tabWorld').onclick=()=>{
+  if(quiz.active){endQuiz('world');return;}
+  if(blankState.active){endBlank('world');return;}
+  setTab('world');
+};
+
+/* ---------- 백지도 ---------- */
+function startBlank(type){
+  if(!blankState.active) blankState.prevTab=curTab;
+  blankState.active=true; blankState.type=type; blankState.checked=new Set();
+  document.getElementById('tabBlank').classList.add('on');
+  document.getElementById('tabKr').classList.remove('on');
+  document.getElementById('tabWorld').classList.remove('on');
+  document.getElementById('tabQuiz').classList.remove('on');
+  closePanel();
+  curTab=type;
+  document.getElementById('wrapKr').style.display = type==='kr'?'block':'none';
+  document.getElementById('wrapWorld').style.display = type==='world'?'block':'none';
+  const total = type==='kr' ? REGIONS.filter(r=>!r.parent&&!r.dot).length : WORLD.countries.filter(c=>!c.dot).length;
+  document.getElementById('blankStat').textContent=`0 / ${total}개 확인`;
+  document.getElementById('blankBar').classList.add('on');
+  // 모든 지역 blank 클래스 적용
+  const list = type==='kr' ? REGIONS : WORLD.countries;
+  list.forEach(r=>{
+    const e=els[r.id]; if(!e) return;
+    e.path.classList.add('blank'); e.path.classList.remove('bchecked');
+    e.label.classList.add('blanklabel'); e.label.classList.remove('show');
+  });
+  Object.values(MAPS).forEach(M=>M.scheduleLabels());
+}
+function clearBlankClasses(){
+  const list = blankState.type==='kr' ? REGIONS : WORLD.countries;
+  list.forEach(r=>{
+    const e=els[r.id]; if(!e) return;
+    e.path.classList.remove('blank','bchecked');
+    e.label.classList.remove('blanklabel','show');
+  });
+}
+function endBlank(backTab){
+  clearBlankClasses();
+  blankState.active=false;
+  document.getElementById('blankBar').classList.remove('on');
+  document.getElementById('tabBlank').classList.remove('on');
+  setTab(backTab||blankState.prevTab);
+}
+function revealBlank(id){
+  const e=els[id]; if(!e) return;
+  const dotType=blankState.type;
+  const list = dotType==='kr' ? REGIONS : WORLD.countries;
+  const total = dotType==='kr' ? list.filter(r=>!r.parent&&!r.dot).length : list.filter(c=>!c.dot).length;
+  const baseId = id.split('#')[0];
+  e.path.classList.add('bchecked');
+  e.label.classList.add('show');
+  clearTimeout(e._blankTm);
+  e._blankTm=setTimeout(()=>e.label.classList.remove('show'),1300);
+  if(!e.region.dot){ blankState.checked.add(baseId); }
+  document.getElementById('blankStat').textContent=`${blankState.checked.size} / ${total}개 확인`;
+}
+document.getElementById('tabBlank').onclick=()=>{
+  if(quiz.active) endQuiz();
+  if(!blankState.active) startBlank(curTab==='world'?'world':'kr');
+};
+document.getElementById('blankQuit').onclick=()=>endBlank();
 
 /* ---------- panel ---------- */
 const panel=document.getElementById('panel'), overlay=document.getElementById('overlay');
@@ -1502,7 +1604,10 @@ function showQuizEnd(){
       <button class="okbtn" style="background:#a8b8c4" onclick="endQuiz()">그만하기</button>
     </div>`;
 }
-document.getElementById('tabQuiz').onclick=()=>{ if(!quiz.active) startQuiz('kr'); };
+document.getElementById('tabQuiz').onclick=()=>{
+  if(blankState.active){ clearBlankClasses(); blankState.active=false; document.getElementById('blankBar').classList.remove('on'); }
+  if(!quiz.active) startQuiz('kr');
+};
 document.getElementById('qModeKr').onclick=()=>startQuiz('kr');
 document.getElementById('qModeWorld').onclick=()=>startQuiz('world');
 document.getElementById('qQuit').onclick=()=>endQuiz();
